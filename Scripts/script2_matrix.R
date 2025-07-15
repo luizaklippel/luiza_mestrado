@@ -20,6 +20,8 @@ path_dir <- "Results/Distributions/"
 
 coordenadas <- list()
 pastas <- dir(path_dir)
+library(conflicted)
+conflict_prefer("select", "dplyr")
 for(i in 1:length(pastas)) {
   path_i <- paste0(path_dir, pastas[i])
   arquivo <- list.files(path_i, pattern = ".csv", full.names = TRUE)
@@ -38,6 +40,7 @@ for(i in 1:length(pastas)) {
 
 # Plot coordinates and shapefiles
 coordenadas_all <- do.call(rbind, coordenadas)
+save(coordenadas_all, file = "Data/coordenadas_all.RData")
 st_crs(coordenadas_all) <- crs(UCs)
 g <- ggplot(st_as_sf(BR)) +
   geom_sf(color = "black", fill = "white") +
@@ -73,9 +76,8 @@ colors <- c("white", colfunc(max(rich_plus1)))
 occs <- terra::vect(col_cord2, crs = crs)
 
 
-m <- plot(mat_uni$grid, border = "gray40",
-     col = colors[rich_plus1]) +
-plot(sf::st_geometry(coordenadas_all), add = TRUE) +
+plot(mat_uni$grid, border = "gray40",
+     col = colors[rich_plus1]) 
+plot(sf::st_geometry(coordenadas_all), add = TRUE) 
 plot(occs, cex = 0.5, col = rep(1:4, each = pastas), add = T)
 
-save(m, file = "Figures/Occurrences.tiff")
