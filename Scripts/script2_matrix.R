@@ -69,6 +69,7 @@ mat_uni <- lets.presab.grid.points(col_cord2,
                                    col_mat3, 
                             UCs, 
                             "uc_id")
+save(mat_uni, file = "Data/mat_uni.RData")
 
 rich_plus1 <- rowSums(mat_uni$PAM[, -1, drop = FALSE]) + 1
 colfunc <- colorRampPalette(c("#fff5f0", "#fb6a4a", "#67000d"))
