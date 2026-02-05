@@ -56,44 +56,5 @@ g <- ggplot(st_as_sf(BR)) +
 g
 ggsave(g, file ="Figures/Coordinates.tiff")
 
-# Organize matrix data
-sp <-as.matrix(coordenadas_all,rownames= "Species")
-col_vec <- c("Species")
-col_mat <- sp[,col_vec]
-col_mat1 <- as.matrix(col_mat)
-col_mat2 <- col_mat1[ ,1]
-col_mat3 <- as.character(col_mat2)
 
-col_c <- c("geometry")
-col_cm <- sp[,col_c]
-col_cord <- as.data.frame(col_cm)
-col_cord1 <- t(col_cord)
-col_cord2 <- as.matrix(col_cord1)
-
-
-# Create matrix
-mat_uni <- lets.presab.grid.points(col_cord2,
-                                   col_mat3, 
-                            UCs, 
-                            "nome_uc")
-mat_uni1 <- lets.presab.grid.points(col_cord2,
-                                    col_mat3, 
-                                    UCs, 
-                                    "uc_id")
-save(mat_uni, file = "Data/mat_uni.RData")
-save(mat_uni1, file = "Data/mat_uni1.RData")
-
-rich_plus1 <- rowSums(mat_uni$PAM[, -1, drop = FALSE]) + 1
-colfunc <- colorRampPalette(c("#fff5f0", "#fb6a4a", "#67000d"))
-colors <- c("white", colfunc(max(rich_plus1)))
-occs <- terra::vect(col_cord2, crs = crs)
-
-
-
-m <- plot(mat_uni$grid, border = "gray40",
-       col = colors[rich_plus1]) +
-plot(sf::st_geometry(coordenadas_all), add = TRUE) 
-plot(occs, cex = 0.5, col = rep(1:4, each = pastas), add = T)
-
-save(m, file = "Figures/Occurrences.tiff")
 
