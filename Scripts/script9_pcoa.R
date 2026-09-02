@@ -14,6 +14,8 @@ library(sf)
 library(factoextra)
 library(ggcorrplot)
 
+rm(list=ls())
+
 #Data
 
 load("Data/vari.RData")
@@ -32,20 +34,107 @@ vari <- vari %>%
 ## GOVERNANCE
 
 gove <- vari%>%
+# ------------------ INICIO DAS ALTEARAÇÕES
+ column_to_rownames("nome_uc")%>%                       #add rownames to the dataframe
  dplyr::select(invas_est,mp,adm,min_dist_pa,year,grupo,co_gestor)%>%
   dplyr::select(-ends_with("s.e."))%>%
-  dplyr::mutate(across(where(is.character), as.factor))
+  dplyr::mutate(across(where(is.character), as.factor))%>%
+  dplyr::mutate(across(where(is.numeric), as.numeric))%>%
+  dplyr::mutate(across(where(is.numeric), scale))%>%     # Scalonei as variáveis numéricas 
+  dplyr::mutate(across(where(is.numeric), as.numeric))
 
-gove <- gove[!is.na(gove$invas_est),]
+
+#TODO: VEJA A POSSIBILIDADE DE FAZER scale(log10(distancia de outras UCs))) para evitar medidas muito discrepantes.
+
+
+gove <- gove%>%filter(complete.cases(.)) # Removi todo os NAs para fazer a análise de PCoA e FAMD.
 
 gove_trait <- gove[,2:6]
 
 # Gower distance
 gower_gov <- daisy(gove_trait, metric = "gower")
 
+
 #PCoA
 
 pcoa_gov <- pcoa(gower_gov)
+
+
+
+
+# FAMD
+gove_trait%>%glimpse()
+TESTE<-FAMD(gove_trait, graph = FALSE)
+TESTE
+TESTE%>%summary()
+
+
+fviz_eig(TESTE, addlabels = TRUE)
+TESTE$var$contrib
+
+
+
+cor.test(TESTE$ind$coord[, 1],pcoa_gov$vectors[, 1],method = "spearman")
+cor.test(TESTE$ind$coord[, 2],pcoa_gov$vectors[, 2],method = "spearman")
+
+plot(TESTE$ind$coord[, 1],pcoa_gov$vectors[, 1])
+plot(TESTE$ind$coord[, 2],pcoa_gov$vectors[, 2])
+
+
+TESTE%>%plotellipses()
+
+partteste<-plotMFApartial(FAMD)
+
+plot(TESTE,choix="var")
+
+
+
+fviz_famd_ind(TESTE, 
+              select.ind = list(name = c(
+                "FLORESTA NACIONAL DE CARAJÁS",
+                "PARQUE NACIONAL DE ILHA GRANDE",
+                "ÁREA DE PROTEÇÃO AMBIENTAL CACHOEIRA DAS ANDORINHAS",
+                "ÁREA DE PROTEÇÃO AMBIENTAL DE GERICINÓ/MENDANHA",
+                "ÁREA DE PROTEÇÃO AMBIENTAL DA SERRA DE SAPIATIBA",
+                "PARQUE NACIONAL DA TIJUCA","RESERVA BIOLÓGICA DE SOORETAMA")), 
+              repel = TRUE,
+              geom = c("point", "text"))
+
+
+
+
+plotellipses(TESTE)
+plot(TESTE,choix="var",select="cos2")  # plot the variables with cos2 greater than 0.6
+
+plot(TESTE,select="contrib 10") # plot the 7 individuals with the highest contribution 
+
+plot.PCA(res.pca, theme=theme_factominer(base_size=8, rel_title=1.2),  # smaller theme
+   ggoptions = list(size=2.5)) 
+
+coords_famd <- TESTE$ind$coord[, 1:2]
+
+# Coordenadas da PCoA (Eixos 1 e 2)
+coords_pcoa <- pcoa_gov$vectors[, 1:2]
+
+
+# --- MÉTODO 1: Análise de Procrustes (Compara a configuração espacial global) ---
+procrustes_res <- procrustes(coords_famd, coords_pcoa, symmetric = TRUE)
+
+procrustes_res%>%summary()
+
+
+  protest_res <- protest(coords_famd, coords_pcoa, permutations = 999)
+print(protest_res)
+
+plot(procrustes_res, kind = 1, main = "Procrustes: FAMD (setas) vs PCoA (pontos)")
+
+
+
+
+# ------------------ FIM DAS ALTEARAÇÕES NESSE TRECHO
+
+
+
 
 ## Porcentagem de explicação do Eixo 1
 100 * (pcoa_gov$values[, 1]/pcoa_gov$trace)[1]
@@ -155,6 +244,9 @@ pca_env <- PCA(X = env_trait, scale.unit = TRUE, graph = FALSE)
 ## Autovalores: porcentagem de explicação para usar no gráfico
 pca_env$eig 
 
+
+
+fviz_eig(pca_env,addlabels = TRUE)
 pca_env$eig[, 1]  # eigenvalues — reter onde > 1
 ## Visualização da porcentagem de explicação de cada eixo
 # nota: é necessário ficar atento ao valor máximo do eixo 1 da análise para determinar o valor do ylim (neste caso, colocamos que o eixo varia de 0 a 70).
