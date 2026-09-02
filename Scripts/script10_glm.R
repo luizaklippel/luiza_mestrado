@@ -21,8 +21,11 @@ library(vcd)
 library(generalhoslem)
 options(na.action = "na.fail") # Necessário para o dredge
 
+# Model once with invas_obs when spp_obs was used in the PCA and another time with invas_est when spp_est was used in the PCA
+
+df_glm$area <- as.numeric(df_glm$area)
 df_glm <- df_glm %>%
-  dplyr::filter(complete.cases(dplyr::select(., invas_est, gov_PCoA1, gov_PCoA2, PC1, PC2, PC3, area)))
+  dplyr::filter(complete.cases(dplyr::select(.,invas_obs, invas_est, gov_PCoA1, gov_PCoA2, PC1, PC2, PC3, area)))
 model_nb <- MASS::glm.nb(invas_est ~ gov_PCoA1 * gov_PCoA2 + PC1 * PC2 * PC3 + offset(log(area)), data = df_glm)
 
 par(mfrow = c(2, 2))
