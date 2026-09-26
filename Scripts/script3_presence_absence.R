@@ -1,3 +1,4 @@
+# INVASIVE SPECIES MATRIX AND OBS AND EST RICHNESS 
 # PACKAGES
 library(letsR) #install_github("macroecology/letsR")
 library(sf)
@@ -42,7 +43,9 @@ UCs <- UCs[is.na(UCs$marinho) | UCs$marinho == "", ]
 coo_mat <- st_coordinates(coords)
 # crs = "+proj=longlat +datum=WGS84 +no_defs"
    crs = crs(coords)  # Mudei para ver se o problema era mismatch entre crs
-
+UCs <- st_transform(UCs_sf, crs = 4326)
+   
+UCs <- vect(UCs)
 pam_inv <- lets.presab.grid.points(coo_mat, coords$Species, 
                                   UCs, "uc_id",
                                   abundance = TRUE)
@@ -64,10 +67,10 @@ pam_inv$PAM%>%dim()
 ##Add the UCs name to the id for iNEXT
 # Get protected areas' names 
 pam_nogeo<-pam_inv$grid%>%sf::st_as_sf()%>%
-  sf::st_drop_geometry()%>%select(uc_id,nome_uc)
+  sf::st_drop_geometry()%>%dplyr::select(uc_id,nome_uc)
 
 # Get protected areas' names from the community matrix 
-pam_IDs_only<-pam_inv$PAM%>%select(sample.unit)
+pam_IDs_only<-pam_inv$PAM%>%dplyr::select(sample.unit)
 
 # Merge protected areas' name from spatial object and community matrix 
 pam_namesID<-left_join(pam_IDs_only, pam_nogeo, by=c("sample.unit"="uc_id"))
@@ -90,7 +93,7 @@ rownames(pam_inv$PAM)<-NULL
 
 write.csv(pam_inv$PAM, file = "Data/presab.csv")
 
-
+mydata <- pam_inv$PAM
 
 mydata <- read.csv(file = "Data/presab.csv")
 community <- as.matrix(mydata[, -c(1,2)])
@@ -103,11 +106,16 @@ community <- t(community[!rem, ])
 # iNEXT
 out <- iNEXT(community, q = 0,
              datatype = "abundance",)
+invas <- out1$iNextEst$size_based%>%filter(Method =="Observed")
+invas1<- invas%>%dplyr::rename(nome_uc = Assemblage)%>%
+  dplyr::rename(invas_obs = qD)%>%
+  dplyr::select(nome_uc, invas_obs)
+obs <- merge(invas1, buffer1)
 
 save(out,file = "Data/out.RData")
 write.csv(out$AsyEst, file = "Data/invas_est.csv")
 
-##NEW SCRIPT FOR MATRIX (nothing wrong yet apparently)##
+##NEW SCRIPT FOR MATRIX (nothing wrong yet apparently)
 
 #Prepare data
 
@@ -176,25 +184,4 @@ plot(sampbias.out)
 proj <- project_bias(sampbias.out)
 map_bias(proj, type = "log_sampling_rate")
 
-# SPECIES ACCUMULATION
 
-accumula <- specaccum(presab)
-plot(accumula)
-save(accumula, file = "Data/accumula.RData")
-
-# Plot Sites
-plot_data <- data.frame("Locais" = c(0, accumula$sites),
-                        "Riqueza" = c(0, accumula$richness),
-                        "lower" = c(0, accumula$richness - accumula$sd),
-                        "upper" = c(0, accumula$richness + accumula$sd))
-g <- ggplot(plot_data, aes(x = Locais, y = Riqueza)) +
-  geom_point(color = "blue", size = 2) +
-  geom_line(color = "blue", lwd = 2) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), 
-              linetype=2, alpha=0.3, fill = "orange") +
-  ylab("Riqueza acumulada") +
-  theme_classic() +
-  theme(text = element_text(size = 16))
-g
-
-ggsave("Figures/Rarefac.png")
